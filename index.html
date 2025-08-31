@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Calendário Anual - 2026</title>
+  <style>
+    :root {
+      --ink:#0f172a;         /* slate-900 */
+      --muted:#64748b;       /* slate-500 */
+      --line:#e2e8f0;        /* slate-200 */
+      --accent:#2563eb;      /* blue-600 */
+      --holiday:#ef4444;     /* red-500 */
+      --event:#16a34a;       /* green-600 */
+      --bg:#f8fafc;          /* slate-50 */
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      color: var(--ink);
+      background: var(--bg);
+      margin: 0; padding: 24px;
+      line-height: 1.45;
+    }
+    header.top {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; margin-bottom: 20px;
+    }
+    h1 { font-size: clamp(1.35rem, 2vw, 1.8rem); margin: 0; }
+    .legend { display: flex; gap: 14px; flex-wrap: wrap; }
+    .legend span { display: inline-flex; align-items: center; gap: 8px; font-size: .95rem; color: var(--muted); }
+    .dot { width: 10px; height: 10px; border-radius: 999px; display: inline-block; }
+    .dot.holiday { background: var(--holiday); }
+    .dot.event { background: var(--event); }
+
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; width: 100%; }
+    .cal { background: #fff; border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 8px 24px rgba(2,6,23,.06); overflow: hidden; }
+    .cal header { padding: 14px 16px; border-bottom: 1px solid var(--line); background: #fff; }
+    .cal h2 { margin: 0; font-size: 1.05rem; letter-spacing: .2px; }
+
+    table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+    thead th { font-weight: 600; font-size: .8rem; color: var(--muted); padding: 10px 6px; background: #fafcff; border-bottom: 1px solid var(--line); }
+    td { height: 74px; vertical-align: top; border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); padding: 6px; position: relative; }
+    td:last-child, th:last-child { border-right: none; }
+    .day { font-size: .86rem; font-weight: 600; color: var(--muted); }
+    .pill { display: inline-block; margin-top: 6px; font-size: .72rem; padding: 3px 6px; border-radius: 9px; border: 1px solid; }
+    .pill.holiday { color: var(--holiday); border-color: var(--holiday); background: rgba(239,68,68,.06); }
+    .pill.event { color: var(--event); border-color: var(--event); background: rgba(22,163,74,.06); }
+
+    @media (max-width: 980px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+  <meta name="description" content="Calendário 2026 com feriados fixos e móveis do Brasil e eventos exemplo." />
+</head>
+<body>
+  <header class="top">
+    <h1>Calendário Anual - 2026</h1>
+    <nav class="legend" aria-label="Legenda">
+      <span><i class="dot holiday" aria-hidden="true"></i> Feriado</span>
+      <span><i class="dot event" aria-hidden="true"></i> Agendamento</span>
+    </nav>
+  </header>
+
+  <main class="grid" id="calendar-grid" aria-live="polite"></main>
+
+  <section aria-labelledby="notas" style="margin-top:24px">
+    <h2 id="notas" style="font-size:1rem;color:var(--muted);font-weight:600;">Notas</h2>
+    <ul style="margin-top:6px;color:var(--muted);">
+      <li>Calendário gerado dinamicamente para o ano de <strong>2026</strong> (semanas iniciando em <strong>segunda-feira</strong>).</li>
+      <li>Feriados nacionais fixos incluídos: 01/01, 21/04, 01/05, 07/09, 12/10, 02/11, 15/11, 25/12.</li>
+      <li>Eventos de estudo exemplificativos são adicionados ao longo do ano e podem ser personalizados em JSON.</li>
+    </ul>
+  </section>
+
+  <script>
+    const year = 2026;
+
+    // Feriados nacionais (fixos) - formato MM-DD
+    const fixedHolidays = {
+      "01-01": "Confraternização Universal",
+      "04-21": "Tiradentes",
+      "05-01": "Dia do Trabalhador",
+      "09-07": "Independência do Brasil",
+      "10-12": "Nossa Senhora Aparecida / Dia das Crianças",
+      "11-02": "Finados",
+      "11-15": "Proclamação da República",
+      "12-25": "Natal"
+    };
+
+    // Cálculo de feriados móveis a partir da Páscoa (Algoritmo de Gauss/Anonymous Gregorian)
+    function easterDate(y){
+      const a = y % 19;
+      const b = Math.floor(y / 100);
+      const c = y % 100;
+      const d = Math.floor(b / 4);
+      const e = b % 4;
+      const f = Math.floor((b + 8) / 25);
+      const g = Math.floor((b - f + 1) / 3);
+      const h = (19*a + b - d - g + 15) % 30;
+      const i = Math.floor(c / 4);
+      const k = c % 4;
+      const l = (32 + 2*e + 2*i - h - k) % 7;
+      const m = Math.floor((a + 11*h + 22*l) / 451);
+      const month = Math.floor((h + l - 7*m + 114) / 31); // 3=Março, 4=Abril
+      const day = ((h + l - 7*m + 114) % 31) + 1;
+      return new Date(y, month - 1, day);
+    }
+
+    function toYMD(dt){
+      const y = dt.getFullYear();
+      const m = String(dt.getMonth()+1).padStart(2,'0');
+      const d = String(dt.getDate()).padStart(2,'0');
+      return `${y}-${m}-${d}`;
+    }
+
+    function movableHolidays(y){
+      const map = {};
+      const easter = easterDate(y);            // Domingo de Páscoa
+      const carnivalTuesday = new Date(easter); carnivalTuesday.setDate(easter.getDate()-47);
+      const goodFriday = new Date(easter);      goodFriday.setDate(easter.getDate()-2);
+      const corpusChristi = new Date(easter);   corpusChristi.setDate(easter.getDate()+60);
+
+      map[toYMD(carnivalTuesday)] = "Carnaval (terça-feira)"; // 17/02/2026
+      map[toYMD(goodFriday)]      = "Sexta-Feira Santa";      // 03/04/2026
+      map[toYMD(corpusChristi)]   = "Corpus Christi";         // 04/06/2026
+      return map;
+    }
+
+    const MOVABLE = movableHolidays(year);
+
+    // Exemplo de agendamentos/estudos (customize à vontade)
+    // Chave: AAAA-MM-DD
+    const studyEvents = {
+      "2026-01-08": { label: "Estudos: Python", title: "Python – estruturas e módulos" },
+      "2026-02-15": { label: "Estudos: JS", title: "JavaScript – DOM & eventos" },
+      "2026-03-12": { label: "Power BI – DAX", title: "Métricas Estimado x Arrecadado" },
+      "2026-04-18": { label: "Aniversário", title: "Aniversário de Matheus Henrique Dias Siqueira" },
+      "2026-04-27": { label: "Projeto Aurora", title: "Revisão de transferências e end_of_day" },
+      "2026-06-10": { label: "Refino Portfólio", title: "README + posicionamento Pleno" },
+      "2026-08-19": { label: "Estudos: Python", title: "Funções, pacotes e venv (macOS)" },
+      "2026-09-23": { label: "Estudos: JS", title: "Fetch API e módulos" },
+      "2026-10-15": { label: "Power BI – DAX", title: "Indicadores e comparação anual" },
+      "2026-12-05": { label: "Refino Portfólio", title: "Fechamento anual de projetos" }
+    };
+
+    const monthNames = [
+      "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+      "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+    ];
+    const weekHeaders = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]; // começa na segunda
+
+    function isHoliday(y, m, d) {
+      const mm = String(m + 1).padStart(2, '0');
+      const dd = String(d).padStart(2, '0');
+      const fixed = fixedHolidays[`${mm}-${dd}`];
+      const movable = MOVABLE[`${y}-${mm}-${dd}`];
+      return movable || fixed || null;
+    }
+
+    function eventFor(y, m, d) {
+      const mm = String(m + 1).padStart(2, '0');
+      const dd = String(d).padStart(2, '0');
+      return studyEvents[`${y}-${mm}-${dd}`] || null;
+    }
+
+    function buildMonth(y, m) {
+      const section = document.createElement('section');
+      section.className = 'cal';
+      section.setAttribute('aria-label', `${monthNames[m]} de ${y}`);
+
+      const head = document.createElement('header');
+      const h2 = document.createElement('h2');
+      h2.textContent = `${monthNames[m]} - ${y}`;
+      head.appendChild(h2);
+      section.appendChild(head);
+
+      const table = document.createElement('table');
+      table.setAttribute('role', 'grid');
+      table.setAttribute('aria-readonly', 'true');
+
+      const thead = document.createElement('thead');
+      const trh = document.createElement('tr');
+      weekHeaders.forEach(w => {
+        const th = document.createElement('th'); th.scope = 'col'; th.textContent = w; trh.appendChild(th);
+      });
+      thead.appendChild(trh);
+      table.appendChild(thead);
+
+      const tbody = document.createElement('tbody');
+      const firstDay = new Date(y, m, 1);
+      const lastDay = new Date(y, m + 1, 0).getDate();
+
+      // Índice da coluna quando a semana começa na segunda-feira
+      const startCol = (firstDay.getDay() + 6) % 7;
+
+      let currentCol = 0;
+      let tr = document.createElement('tr');
+
+      // células vazias antes do dia 1
+      for (let i = 0; i < startCol; i++) {
+        tr.appendChild(document.createElement('td'));
+        currentCol++;
+      }
+
+      for (let d = 1; d <= lastDay; d++) {
+        if (currentCol === 7) { tbody.appendChild(tr); tr = document.createElement('tr'); currentCol = 0; }
+        const td = document.createElement('td'); td.className = 'd';
+        const dayDiv = document.createElement('div'); dayDiv.className = 'day'; dayDiv.textContent = d; td.appendChild(dayDiv);
+
+        const holiday = isHoliday(y, m, d);
+        if (holiday) {
+          const span = document.createElement('span');
+          span.className = 'pill holiday';
+          span.title = holiday;
+          span.textContent = holiday;
+          td.appendChild(span);
+        }
+
+        const ev = eventFor(y, m, d);
+        if (ev) {
+          const span = document.createElement('span');
+          span.className = 'pill event';
+          span.title = ev.title;
+          span.textContent = ev.label;
+          td.appendChild(span);
+        }
+
+        tr.appendChild(td); currentCol++;
+      }
+
+      // completa última linha
+      if (tr.children.length) { while (tr.children.length < 7) tr.appendChild(document.createElement('td')); tbody.appendChild(tr); }
+
+      table.appendChild(tbody);
+      section.appendChild(table);
+      return section;
+    }
+
+    const grid = document.getElementById('calendar-grid');
+    for (let m = 0; m < 12; m++) grid.appendChild(buildMonth(year, m));
+  </script>
+</body>
+</html>
+
